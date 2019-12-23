@@ -1,1 +1,5 @@
-target
+/.bundle
+/vendor
+/_site
+.sass-cache
+.jekyll-cache

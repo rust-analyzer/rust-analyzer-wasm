@@ -3,7 +3,7 @@
 To run:
 
 ```shell
-$ wasm-pack build
+$ wasm-pack build --target web
 $ cd www
 $ yarn
 $ yarn start

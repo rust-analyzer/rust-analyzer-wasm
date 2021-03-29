@@ -4,21 +4,21 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack --config webpack.config.js --mode production",
-    "start": "webpack-dev-server --host 0.0.0.0"
+    "start": "webpack serve --host 0.0.0.0"
   },
   "author": "rust-analyzer developers",
   "license": "(MIT OR Apache-2.0)",
   "dependencies": {
-    "monaco-editor": "^0.18.1",
-    "text-encoding": "^0.7.0",
-    "wasm_demo": "file:../pkg"
+    "monaco-editor": "^0.23.0",
+    "text-encoding": "^0.7.0"
   },
   "devDependencies": {
-    "css-loader": "^3.2.0",
-    "html-webpack-plugin": "^3.2.0",
-    "style-loader": "^1.0.0",
-    "webpack": "^4.39",
-    "webpack-cli": "^3.3",
-    "webpack-dev-server": "^3.8"
+    "css-loader": "^5.1.3",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.3.1",
+    "style-loader": "^2.0.0",
+    "webpack": "^5.27.1",
+    "webpack-cli": "^4.5.0",
+    "webpack-dev-server": "^3.11.2"
   }
 }

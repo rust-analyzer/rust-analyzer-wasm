@@ -35,7 +35,7 @@ pub struct Command {
 
 #[derive(Serialize)]
 pub struct Highlight {
-    pub tag: Option<&'static str>,
+    pub tag: Option<String>,
     pub range: Range,
 }
 
@@ -119,7 +119,9 @@ pub enum CompletionItemKind {
     Customcolor = 22,
     Folder = 23,
     TypeParameter = 24,
-    Snippet = 25,
+    User = 25,
+    Issue = 26,
+    Snippet = 27,
 }
 
 #[allow(dead_code)]

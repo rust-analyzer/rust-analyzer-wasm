@@ -1,10 +1,9 @@
 use super::return_types;
-use ra_ide_api::{
-    CompletionItem, CompletionItemKind, Documentation, FileId, FilePosition, Fold, FoldKind,
-    FunctionSignature, InsertTextFormat, LineCol, LineIndex, NavigationTarget, RangeInfo, Severity,
+use ide::{
+    CallInfo, CompletionItem, CompletionItemKind, Documentation, FileId, FilePosition, Fold,
+    FoldKind, Indel, InsertTextFormat, LineCol, LineIndex, NavigationTarget, RangeInfo, Severity,
+    StructureNodeKind, TextRange, TextEdit
 };
-use ra_syntax::{SyntaxKind, TextRange};
-use ra_text_edit::{AtomTextEdit, TextEdit};
 
 pub trait Conv {
     type Output;
@@ -26,7 +25,7 @@ impl ConvWith<(&LineIndex, FileId)> for Position {
     type Output = FilePosition;
 
     fn conv_with(self, (line_index, file_id): (&LineIndex, FileId)) -> Self::Output {
-        let line_col = LineCol { line: self.line_number - 1, col_utf16: self.column - 1 };
+        let line_col = LineCol { line: self.line_number - 1, col: self.column - 1 };
         let offset = line_index.offset(line_col);
         FilePosition { file_id, offset }
     }
@@ -41,9 +40,9 @@ impl ConvWith<&LineIndex> for TextRange {
 
         return_types::Range {
             startLineNumber: start.line + 1,
-            startColumn: start.col_utf16 + 1,
+            startColumn: start.col + 1,
             endLineNumber: end.line + 1,
-            endColumn: end.col_utf16 + 1,
+            endColumn: end.col + 1,
         }
     }
 }
@@ -56,21 +55,34 @@ impl Conv for CompletionItemKind {
         match self {
             CompletionItemKind::Keyword => Keyword,
             CompletionItemKind::Snippet => Snippet,
-            CompletionItemKind::Module => Module,
-            CompletionItemKind::Function => Function,
-            CompletionItemKind::Struct => Struct,
-            CompletionItemKind::Enum => Enum,
-            CompletionItemKind::EnumVariant => EnumMember,
+
             CompletionItemKind::BuiltinType => Struct,
             CompletionItemKind::Binding => Variable,
-            CompletionItemKind::Field => Field,
-            CompletionItemKind::Trait => Interface,
-            CompletionItemKind::TypeAlias => Struct,
-            CompletionItemKind::Const => Constant,
-            CompletionItemKind::Static => Value,
+            CompletionItemKind::SymbolKind(it) => match it {
+                ide::SymbolKind::Const => Constant,
+                ide::SymbolKind::ConstParam => Constant,
+                ide::SymbolKind::Enum => Enum,
+                ide::SymbolKind::Field => Field,
+                ide::SymbolKind::Function => Function,
+                ide::SymbolKind::Impl => Interface,
+                ide::SymbolKind::Label => Constant,
+                ide::SymbolKind::LifetimeParam => TypeParameter,
+                ide::SymbolKind::Local => Variable,
+                ide::SymbolKind::Macro => Function,
+                ide::SymbolKind::Module => Module,
+                ide::SymbolKind::SelfParam => Value,
+                ide::SymbolKind::Static => Value,
+                ide::SymbolKind::Struct => Struct,
+                ide::SymbolKind::Trait => Interface,
+                ide::SymbolKind::TypeAlias => Value,
+                ide::SymbolKind::TypeParam => TypeParameter,
+                ide::SymbolKind::Union => Struct,
+                ide::SymbolKind::ValueParam => TypeParameter,
+                ide::SymbolKind::Variant => User,
+            },
             CompletionItemKind::Method => Method,
-            CompletionItemKind::TypeParam => TypeParameter,
-            CompletionItemKind::Macro => Method,
+            CompletionItemKind::Attribute => Property,
+            CompletionItemKind::UnresolvedReference => User,
         }
     }
 }
@@ -86,7 +98,7 @@ impl Conv for Severity {
     }
 }
 
-impl ConvWith<&LineIndex> for &AtomTextEdit {
+impl ConvWith<&LineIndex> for &Indel {
     type Output = return_types::TextEdit;
 
     fn conv_with(self, line_index: &LineIndex) -> Self::Output {
@@ -103,29 +115,31 @@ impl ConvWith<&LineIndex> for CompletionItem {
         let mut text_edit = None;
         // LSP does not allow arbitrary edits in completion, so we have to do a
         // non-trivial mapping here.
-        for atom_edit in self.text_edit().as_atoms() {
-            if self.source_range().is_subrange(&atom_edit.delete) {
+        for atom_edit in self.text_edit().iter() {
+            if self.source_range().contains_range(atom_edit.delete) {
                 text_edit = Some(if atom_edit.delete == self.source_range() {
                     atom_edit.conv_with(line_index)
                 } else {
                     assert!(self.source_range().end() == atom_edit.delete.end());
                     let range1 =
-                        TextRange::from_to(atom_edit.delete.start(), self.source_range().start());
+                        TextRange::new(atom_edit.delete.start(), self.source_range().start());
                     let range2 = self.source_range();
-                    let edit1 = AtomTextEdit::replace(range1, String::new());
-                    let edit2 = AtomTextEdit::replace(range2, atom_edit.insert.clone());
+                    let edit1 = Indel::replace(range1, String::new());
+                    let edit2 = Indel::replace(range2, atom_edit.insert.clone());
                     additional_text_edits.push(edit1.conv_with(line_index));
                     edit2.conv_with(line_index)
                 })
             } else {
-                assert!(self.source_range().intersection(&atom_edit.delete).is_none());
-                additional_text_edits.push(atom_edit.conv_with(line_index));
+                text_edit = Some(atom_edit.conv_with(line_index));
             }
         }
         let return_types::TextEdit { range, text } = text_edit.unwrap();
 
         return_types::CompletionItem {
-            kind: self.kind().unwrap_or(CompletionItemKind::Struct).conv(),
+            kind: self
+                .kind()
+                .unwrap_or(CompletionItemKind::SymbolKind(ide::SymbolKind::Struct))
+                .conv(),
             label: self.label().to_string(),
             range,
             detail: self.detail().map(|it| it.to_string()),
@@ -146,47 +160,22 @@ impl ConvWith<&LineIndex> for CompletionItem {
 impl Conv for Documentation {
     type Output = return_types::MarkdownString;
     fn conv(self) -> Self::Output {
-        fn code_line_ignored_by_rustdoc(line: &str) -> bool {
-            let trimmed = line.trim();
-            trimmed == "#" || trimmed.starts_with("# ") || trimmed.starts_with("#\t")
-        }
-
-        let mut processed_lines = Vec::new();
-        let mut in_code_block = false;
-        for line in self.as_str().lines() {
-            if in_code_block && code_line_ignored_by_rustdoc(line) {
-                continue;
-            }
-
-            if line.starts_with("```") {
-                in_code_block ^= true
-            }
-
-            let line = if in_code_block && line.starts_with("```") && !line.contains("rust") {
-                "```rust"
-            } else {
-                line
-            };
-
-            processed_lines.push(line);
-        }
-
-        return_types::MarkdownString { value: processed_lines.join("\n") }
+        conv_markdown_string(self.as_str())
     }
 }
 
-impl Conv for FunctionSignature {
+impl Conv for CallInfo {
     type Output = return_types::SignatureInformation;
     fn conv(self) -> Self::Output {
         use return_types::{ParameterInformation, SignatureInformation};
 
-        let label = self.to_string();
-        let documentation = self.doc.map(|it| it.conv());
+        let label = self.signature.clone();
+        let documentation = self.doc.as_ref().map(|it| conv_markdown_string(&it));
 
         let parameters: Vec<ParameterInformation> = self
-            .parameters
+            .parameter_labels()
             .into_iter()
-            .map(|param| ParameterInformation { label: param })
+            .map(|param| ParameterInformation { label: param.to_string() })
             .collect();
 
         SignatureInformation { label, documentation, parameters }
@@ -200,10 +189,10 @@ impl ConvWith<&LineIndex> for RangeInfo<Vec<NavigationTarget>> {
         self.info
             .into_iter()
             .map(|nav| {
-                let range = nav.full_range().conv_with(&line_index);
+                let range = nav.full_range.conv_with(&line_index);
 
                 let target_selection_range =
-                    nav.focus_range().map(|it| it.conv_with(&line_index)).unwrap_or(range);
+                    nav.focus_range.map(|it| it.conv_with(&line_index)).unwrap_or(range);
 
                 return_types::LocationLink {
                     originSelectionRange: selection,
@@ -215,24 +204,44 @@ impl ConvWith<&LineIndex> for RangeInfo<Vec<NavigationTarget>> {
     }
 }
 
-impl Conv for SyntaxKind {
+impl Conv for ide::SymbolKind {
     type Output = return_types::SymbolKind;
 
     fn conv(self) -> Self::Output {
         use return_types::SymbolKind;
         match self {
-            SyntaxKind::FN_DEF => SymbolKind::Function,
-            SyntaxKind::STRUCT_DEF => SymbolKind::Struct,
-            SyntaxKind::ENUM_DEF => SymbolKind::Enum,
-            SyntaxKind::ENUM_VARIANT => SymbolKind::EnumMember,
-            SyntaxKind::TRAIT_DEF => SymbolKind::Interface,
-            SyntaxKind::MODULE => SymbolKind::Module,
-            SyntaxKind::TYPE_ALIAS_DEF => SymbolKind::TypeParameter,
-            SyntaxKind::RECORD_FIELD_DEF => SymbolKind::Field,
-            SyntaxKind::STATIC_DEF => SymbolKind::Constant,
-            SyntaxKind::CONST_DEF => SymbolKind::Constant,
-            SyntaxKind::IMPL_BLOCK => SymbolKind::Object,
-            _ => SymbolKind::Variable,
+            ide::SymbolKind::Const => SymbolKind::Constant,
+            ide::SymbolKind::ConstParam => SymbolKind::Constant,
+            ide::SymbolKind::Enum => SymbolKind::Enum,
+            ide::SymbolKind::Field => SymbolKind::Field,
+            ide::SymbolKind::Function => SymbolKind::Function,
+            ide::SymbolKind::Impl => SymbolKind::Interface,
+            ide::SymbolKind::Label => SymbolKind::Constant,
+            ide::SymbolKind::LifetimeParam => SymbolKind::TypeParameter,
+            ide::SymbolKind::Local => SymbolKind::Variable,
+            ide::SymbolKind::Macro => SymbolKind::Function,
+            ide::SymbolKind::Module => SymbolKind::Module,
+            ide::SymbolKind::SelfParam => SymbolKind::Variable,
+            ide::SymbolKind::Static => SymbolKind::Constant,
+            ide::SymbolKind::Struct => SymbolKind::Struct,
+            ide::SymbolKind::Trait => SymbolKind::Interface,
+            ide::SymbolKind::TypeAlias => SymbolKind::TypeParameter,
+            ide::SymbolKind::TypeParam => SymbolKind::TypeParameter,
+            ide::SymbolKind::Union => SymbolKind::Struct,
+            ide::SymbolKind::ValueParam => SymbolKind::TypeParameter,
+            ide::SymbolKind::Variant => SymbolKind::EnumMember,
+        }
+    }
+}
+
+impl Conv for StructureNodeKind {
+    type Output = return_types::SymbolKind;
+
+    fn conv(self) -> Self::Output {
+        use return_types::SymbolKind;
+        match self {
+            StructureNodeKind::SymbolKind(it) => it.conv(),
+            StructureNodeKind::Region => SymbolKind::Property,
         }
     }
 }
@@ -241,7 +250,7 @@ impl ConvWith<&LineIndex> for TextEdit {
     type Output = Vec<return_types::TextEdit>;
 
     fn conv_with(self, ctx: &LineIndex) -> Self::Output {
-        self.as_atoms().iter().map(|atom| atom.conv_with(ctx)).collect()
+        self.iter().map(|atom| atom.conv_with(ctx)).collect()
     }
 }
 
@@ -258,7 +267,39 @@ impl ConvWith<&LineIndex> for Fold {
                 FoldKind::Imports => Some(return_types::FoldingRangeKind::Imports),
                 FoldKind::Mods => None,
                 FoldKind::Block => None,
+                FoldKind::ArgList => None,
+                FoldKind::Region => Some(return_types::FoldingRangeKind::Region),
             },
         }
     }
+}
+
+
+fn conv_markdown_string(s: &str) -> return_types::MarkdownString {
+    fn code_line_ignored_by_rustdoc(line: &str) -> bool {
+        let trimmed = line.trim();
+        trimmed == "#" || trimmed.starts_with("# ") || trimmed.starts_with("#\t")
+    }
+
+    let mut processed_lines = Vec::new();
+    let mut in_code_block = false;
+    for line in s.lines() {
+        if in_code_block && code_line_ignored_by_rustdoc(line) {
+            continue;
+        }
+
+        if line.starts_with("```") {
+            in_code_block ^= true
+        }
+
+        let line = if in_code_block && line.starts_with("```") && !line.contains("rust") {
+            "```rust"
+        } else {
+            line
+        };
+
+        processed_lines.push(line);
+    }
+
+    return_types::MarkdownString { value: processed_lines.join("\n") }
 }

@@ -8,8 +8,8 @@ use ide_db::helpers::{
 };
 use wasm_bindgen::prelude::*;
 
-mod conv;
-use conv::*;
+mod to_proto;
+
 mod return_types;
 use return_types::*;
 
@@ -53,7 +53,7 @@ impl WorldState {
             .into_iter()
             .map(|hl| Highlight {
                 tag: Some(hl.highlight.tag.to_string()),
-                range: hl.range.conv_with(&line_index),
+                range: to_proto::text_range(hl.range, &line_index),
             })
             .collect();
 
@@ -66,10 +66,10 @@ impl WorldState {
             .into_iter()
             .map(|d| {
                 let Range { startLineNumber, startColumn, endLineNumber, endColumn } =
-                    d.range.conv_with(&line_index);
+                    to_proto::text_range(d.range, &line_index);
                 Diagnostic {
                     message: d.message,
-                    severity: d.severity.conv(),
+                    severity: to_proto::severity(d.severity),
                     startLineNumber,
                     startColumn,
                     endLineNumber,
@@ -98,13 +98,14 @@ impl WorldState {
         log::warn!("completions");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let res = match self.analysis.completions(&COMPLETION_CONFIG, pos).unwrap() {
             Some(items) => items,
             None => return JsValue::NULL,
         };
 
-        let items: Vec<_> = res.into_iter().map(|item| item.conv_with(&line_index)).collect();
+        let items: Vec<_> =
+            res.into_iter().map(|item| to_proto::completion_item(item, &line_index)).collect();
         serde_wasm_bindgen::to_value(&items).unwrap()
     }
 
@@ -112,7 +113,7 @@ impl WorldState {
         log::warn!("hover");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let info = match self.analysis.hover(pos, true, true).unwrap() {
             Some(info) => info,
             _ => return JsValue::NULL,
@@ -121,7 +122,7 @@ impl WorldState {
         let value = info.info.markup.to_string();
         let hover = Hover {
             contents: vec![MarkdownString { value }],
-            range: info.range.conv_with(&line_index),
+            range: to_proto::text_range(info.range, &line_index),
         };
 
         serde_wasm_bindgen::to_value(&hover).unwrap()
@@ -160,11 +161,11 @@ impl WorldState {
                     .info
                     .iter()
                     .map(|target| target.focus_range.unwrap_or_else(|| target.full_range))
-                    .map(|range| range.conv_with(&line_index))
+                    .map(|range| to_proto::text_range(range, &line_index))
                     .collect();
 
                 Some(CodeLensSymbol {
-                    range: it.node_range.conv_with(&line_index),
+                    range: to_proto::text_range(it.node_range, &line_index),
                     command: Some(Command {
                         id: "editor.action.showReferences".into(),
                         title,
@@ -181,7 +182,7 @@ impl WorldState {
         log::warn!("references");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let info = match self.analysis.find_all_refs(pos, None).unwrap() {
             Some(info) => info,
             _ => return JsValue::NULL,
@@ -191,13 +192,13 @@ impl WorldState {
         if include_declaration {
             if let Some(r) = info.declaration {
                 let r = r.nav.focus_range.unwrap_or_else(|| r.nav.full_range);
-                res.push(Highlight { tag: None, range: r.conv_with(&line_index) });
+                res.push(Highlight { tag: None, range: to_proto::text_range(r, &line_index) });
             }
         }
         info.references.iter().for_each(|(_id, ranges)| {
             // FIXME: handle multiple files
             for (r, _) in ranges {
-                res.push(Highlight { tag: None, range: r.conv_with(&line_index) });
+                res.push(Highlight { tag: None, range: to_proto::text_range(*r, &line_index) });
             }
         });
 
@@ -208,14 +209,14 @@ impl WorldState {
         log::warn!("prepare_rename");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let refs = match self.analysis.find_all_refs(pos, None).unwrap() {
             None => return JsValue::NULL,
             Some(refs) => refs,
         };
 
         let declaration = refs.declaration.unwrap();
-        let range = declaration.nav.full_range.conv_with(&line_index);
+        let range = to_proto::text_range(declaration.nav.full_range, &line_index);
         let text = declaration.nav.name.to_string();
 
         serde_wasm_bindgen::to_value(&RenameLocation { range, text }).unwrap()
@@ -225,7 +226,7 @@ impl WorldState {
         log::warn!("rename");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let change = match self.analysis.rename(pos, new_name).unwrap() {
             Ok(change) => change,
             Err(_) => return JsValue::NULL,
@@ -235,7 +236,7 @@ impl WorldState {
             .source_file_edits
             .iter()
             .flat_map(|(_, edit)| edit.iter())
-            .map(|atom: &Indel| atom.conv_with(&line_index))
+            .map(|atom: &Indel| to_proto::text_edit(atom, &line_index))
             .collect();
 
         serde_wasm_bindgen::to_value(&result).unwrap()
@@ -245,14 +246,14 @@ impl WorldState {
         log::warn!("signature_help");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let call_info = match self.analysis.call_info(pos) {
             Ok(Some(call_info)) => call_info,
             _ => return JsValue::NULL,
         };
 
         let active_parameter = call_info.active_parameter;
-        let sig_info = call_info.conv();
+        let sig_info = to_proto::signature_information(call_info);
 
         let result = SignatureHelp {
             signatures: [sig_info],
@@ -266,13 +267,13 @@ impl WorldState {
         log::warn!("definition");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let nav_info = match self.analysis.goto_definition(pos) {
             Ok(Some(nav_info)) => nav_info,
             _ => return JsValue::NULL,
         };
 
-        let res = nav_info.conv_with(&line_index);
+        let res = to_proto::location_links(nav_info, &line_index);
         serde_wasm_bindgen::to_value(&res).unwrap()
     }
 
@@ -280,13 +281,13 @@ impl WorldState {
         log::warn!("type_definition");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let nav_info = match self.analysis.goto_type_definition(pos) {
             Ok(Some(nav_info)) => nav_info,
             _ => return JsValue::NULL,
         };
 
-        let res = nav_info.conv_with(&line_index);
+        let res = to_proto::location_links(nav_info, &line_index);
         serde_wasm_bindgen::to_value(&res).unwrap()
     }
 
@@ -304,12 +305,12 @@ impl WorldState {
             let doc_symbol = DocumentSymbol {
                 name: symbol.label.clone(),
                 detail: symbol.detail.unwrap_or(symbol.label),
-                kind: symbol.kind.conv(),
-                range: symbol.node_range.conv_with(&line_index),
+                kind: to_proto::symbol_kind(symbol.kind),
+                range: to_proto::text_range(symbol.node_range, &line_index),
                 children: None,
                 tags: [if symbol.deprecated { SymbolTag::Deprecated } else { SymbolTag::None }],
                 containerName: None,
-                selectionRange: symbol.navigation_range.conv_with(&line_index),
+                selectionRange: to_proto::text_range(symbol.navigation_range, &line_index),
             };
             parents.push((doc_symbol, symbol.parent));
         }
@@ -334,7 +335,7 @@ impl WorldState {
         log::warn!("type_formatting");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let mut pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let mut pos = file_position(line_number, column, &line_index, self.file_id);
         pos.offset -= TextSize::of('.');
 
         let edit = self.analysis.on_char_typed(pos, ch);
@@ -344,7 +345,7 @@ impl WorldState {
             _ => return JsValue::NULL,
         };
 
-        let change: Vec<TextEdit> = edit.conv_with(&line_index);
+        let change: Vec<TextEdit> = to_proto::text_edits(edit, &line_index);
         serde_wasm_bindgen::to_value(&change).unwrap()
     }
 
@@ -352,7 +353,8 @@ impl WorldState {
         log::warn!("folding_ranges");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
         if let Ok(folds) = self.analysis.folding_ranges(self.file_id) {
-            let res: Vec<_> = folds.into_iter().map(|fold| fold.conv_with(&line_index)).collect();
+            let res: Vec<_> =
+                folds.into_iter().map(|fold| to_proto::folding_range(fold, &line_index)).collect();
             serde_wasm_bindgen::to_value(&res).unwrap()
         } else {
             JsValue::NULL
@@ -363,14 +365,25 @@ impl WorldState {
         log::warn!("goto_implementation");
         let line_index = self.analysis.file_line_index(self.file_id).unwrap();
 
-        let pos = Position { line_number, column }.conv_with((&line_index, self.file_id));
+        let pos = file_position(line_number, column, &line_index, self.file_id);
         let nav_info = match self.analysis.goto_implementation(pos) {
             Ok(Some(it)) => it,
             _ => return JsValue::NULL,
         };
-        let res = nav_info.conv_with(&line_index);
+        let res = to_proto::location_links(nav_info, &line_index);
         serde_wasm_bindgen::to_value(&res).unwrap()
     }
+}
+
+fn file_position(
+    line_number: u32,
+    column: u32,
+    line_index: &ide::LineIndex,
+    file_id: ide::FileId,
+) -> ide::FilePosition {
+    let line_col = ide::LineCol { line: line_number - 1, col: column - 1 };
+    let offset = line_index.offset(line_col);
+    ide::FilePosition { file_id, offset }
 }
 
 // FIXME:

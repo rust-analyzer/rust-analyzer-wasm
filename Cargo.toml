@@ -20,5 +20,5 @@ stacker = "0.1.13"
 wasm-bindgen = "0.2.72"
 wasm-bindgen-rayon = "1.0.1"
 
-ide = { git = "https://github.com/rust-analyzer/rust-analyzer", rev = "27befe6c7" }
-ide_db = { git = "https://github.com/rust-analyzer/rust-analyzer", rev = "27befe6c7" }
+ide = { version = "0.0.44", package = "ra_ap_ide" }
+ide_db = { version = "0.0.44", package = "ra_ap_ide_db" }

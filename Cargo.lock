@@ -28,9 +28,9 @@ checksum = "33954243bd79057c2de7338850b85983a44588021f8a5fee574a8888c6de4344"
 
 [[package]]
 name = "arrayvec"
-version = "0.5.2"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
+checksum = "269d0f5e68353a7cab87f81e7c736adc008d279a36ebc6a05dfe01193a89f0c9"
 
 [[package]]
 name = "atty"
@@ -48,22 +48,6 @@ name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
-
-[[package]]
-name = "base_db"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "cfg",
- "profile",
- "rustc-hash",
- "salsa",
- "stdx",
- "syntax",
- "test_utils",
- "tt",
- "vfs",
-]
 
 [[package]]
 name = "bitflags"
@@ -88,15 +72,6 @@ name = "cc"
 version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
-
-[[package]]
-name = "cfg"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "rustc-hash",
- "tt",
-]
 
 [[package]]
 name = "cfg-if"
@@ -337,195 +312,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hir"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "arrayvec",
- "base_db",
- "either",
- "hir_def",
- "hir_expand",
- "hir_ty",
- "itertools",
- "log",
- "profile",
- "rustc-hash",
- "smallvec",
- "stdx",
- "syntax",
- "tt",
-]
-
-[[package]]
-name = "hir_def"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "anymap",
- "base_db",
- "cfg",
- "cov-mark",
- "drop_bomb",
- "either",
- "fst",
- "hir_expand",
- "indexmap",
- "itertools",
- "la-arena",
- "log",
- "mbe",
- "once_cell",
- "profile",
- "rustc-hash",
- "smallvec",
- "stdx",
- "syntax",
- "tt",
-]
-
-[[package]]
-name = "hir_expand"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "base_db",
- "cfg",
- "either",
- "la-arena",
- "log",
- "mbe",
- "parser",
- "profile",
- "rustc-hash",
- "syntax",
- "tt",
-]
-
-[[package]]
-name = "hir_ty"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "arrayvec",
- "base_db",
- "chalk-ir",
- "chalk-recursive",
- "chalk-solve",
- "cov-mark",
- "ena",
- "hir_def",
- "hir_expand",
- "itertools",
- "la-arena",
- "log",
- "profile",
- "rustc-hash",
- "scoped-tls",
- "smallvec",
- "stdx",
- "syntax",
-]
-
-[[package]]
-name = "ide"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "cfg",
- "cov-mark",
- "either",
- "hir",
- "ide_assists",
- "ide_completion",
- "ide_db",
- "ide_ssr",
- "indexmap",
- "itertools",
- "log",
- "oorandom",
- "profile",
- "pulldown-cmark",
- "pulldown-cmark-to-cmark",
- "rustc-hash",
- "stdx",
- "syntax",
- "text_edit",
- "url",
-]
-
-[[package]]
-name = "ide_assists"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "cov-mark",
- "either",
- "hir",
- "ide_db",
- "itertools",
- "profile",
- "rustc-hash",
- "stdx",
- "syntax",
- "text_edit",
-]
-
-[[package]]
-name = "ide_completion"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "base_db",
- "cov-mark",
- "either",
- "hir",
- "ide_db",
- "itertools",
- "log",
- "profile",
- "rustc-hash",
- "stdx",
- "syntax",
- "text_edit",
-]
-
-[[package]]
-name = "ide_db"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "base_db",
- "cov-mark",
- "either",
- "fst",
- "hir",
- "itertools",
- "log",
- "once_cell",
- "profile",
- "rayon",
- "rustc-hash",
- "stdx",
- "syntax",
- "text_edit",
-]
-
-[[package]]
-name = "ide_ssr"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "cov-mark",
- "hir",
- "ide_db",
- "itertools",
- "rustc-hash",
- "syntax",
- "text_edit",
-]
-
-[[package]]
 name = "idna"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -580,11 +366,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "la-arena"
-version = "0.2.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -628,21 +409,6 @@ name = "matches"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
-
-[[package]]
-name = "mbe"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "cov-mark",
- "log",
- "parser",
- "rustc-hash",
- "smallvec",
- "stdx",
- "syntax",
- "tt",
-]
 
 [[package]]
 name = "memchr"
@@ -726,19 +492,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parser"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "drop_bomb",
-]
-
-[[package]]
-name = "paths"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-
-[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -789,19 +542,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "profile"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "cfg-if 1.0.0",
- "countme",
- "la-arena",
- "libc",
- "once_cell",
- "perf-event",
-]
-
-[[package]]
 name = "psm"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -837,6 +577,356 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "ra_ap_base_db"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b21a27ef60b3da8c6138a71bd84292da99855cf26b60b38da2e33fb4cc3e1275"
+dependencies = [
+ "ra_ap_cfg",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_test_utils",
+ "ra_ap_tt",
+ "ra_ap_vfs",
+ "rustc-hash",
+ "salsa",
+]
+
+[[package]]
+name = "ra_ap_cfg"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9390bff66e3aee378133718012b9b9abb713dfc8802669c4553400f060732d99"
+dependencies = [
+ "ra_ap_tt",
+ "rustc-hash",
+]
+
+[[package]]
+name = "ra_ap_hir"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17d2ca443e1068786933bdbb4220db0e7979bd9ee61428a8e03662d234663ac7"
+dependencies = [
+ "arrayvec",
+ "either",
+ "itertools",
+ "log",
+ "ra_ap_base_db",
+ "ra_ap_hir_def",
+ "ra_ap_hir_expand",
+ "ra_ap_hir_ty",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_tt",
+ "rustc-hash",
+ "smallvec",
+]
+
+[[package]]
+name = "ra_ap_hir_def"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b5ccb63902e6b8b7c684ef5c68247e1885ff8448a5a4d4be584cde89f6751d2"
+dependencies = [
+ "anymap",
+ "cov-mark",
+ "drop_bomb",
+ "either",
+ "fst",
+ "indexmap",
+ "itertools",
+ "log",
+ "once_cell",
+ "ra_ap_base_db",
+ "ra_ap_cfg",
+ "ra_ap_hir_expand",
+ "ra_ap_la-arena",
+ "ra_ap_mbe",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_tt",
+ "rustc-hash",
+ "smallvec",
+]
+
+[[package]]
+name = "ra_ap_hir_expand"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a267ecec901e60895bde5b98d88e9ca5be200c0d168725aedd3c84f42a322be0"
+dependencies = [
+ "either",
+ "log",
+ "ra_ap_base_db",
+ "ra_ap_cfg",
+ "ra_ap_la-arena",
+ "ra_ap_mbe",
+ "ra_ap_parser",
+ "ra_ap_profile",
+ "ra_ap_syntax",
+ "ra_ap_tt",
+ "rustc-hash",
+]
+
+[[package]]
+name = "ra_ap_hir_ty"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef0aaf7cdd8761946d96358fa93056e49b506edd28e8f10941047a58db8cac2f"
+dependencies = [
+ "arrayvec",
+ "chalk-ir",
+ "chalk-recursive",
+ "chalk-solve",
+ "cov-mark",
+ "ena",
+ "itertools",
+ "log",
+ "ra_ap_base_db",
+ "ra_ap_hir_def",
+ "ra_ap_hir_expand",
+ "ra_ap_la-arena",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "rustc-hash",
+ "scoped-tls",
+ "smallvec",
+]
+
+[[package]]
+name = "ra_ap_ide"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4d2a7a56c9d2a8eaf4d8c2939ec20b65cc1c018a5d57ce5d5540509c755bed6"
+dependencies = [
+ "cov-mark",
+ "either",
+ "indexmap",
+ "itertools",
+ "log",
+ "oorandom",
+ "pulldown-cmark",
+ "pulldown-cmark-to-cmark",
+ "ra_ap_cfg",
+ "ra_ap_hir",
+ "ra_ap_ide_assists",
+ "ra_ap_ide_completion",
+ "ra_ap_ide_db",
+ "ra_ap_ide_ssr",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_text_edit",
+ "rustc-hash",
+ "url",
+]
+
+[[package]]
+name = "ra_ap_ide_assists"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b857402b7053baedef7fa257cf2afd515e622d70e1f26d3b943209f22298afdf"
+dependencies = [
+ "cov-mark",
+ "either",
+ "itertools",
+ "ra_ap_hir",
+ "ra_ap_ide_db",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_text_edit",
+ "rustc-hash",
+]
+
+[[package]]
+name = "ra_ap_ide_completion"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f0e35c56c3fc20066489d016a0dd429985c72b45f7a85451e3568156e916180"
+dependencies = [
+ "cov-mark",
+ "either",
+ "itertools",
+ "log",
+ "ra_ap_base_db",
+ "ra_ap_hir",
+ "ra_ap_ide_db",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_text_edit",
+ "rustc-hash",
+]
+
+[[package]]
+name = "ra_ap_ide_db"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9177815025e55409ed05c25a82139ceb5841c42cfcc091864c9ec92f0e160e41"
+dependencies = [
+ "cov-mark",
+ "either",
+ "fst",
+ "itertools",
+ "log",
+ "once_cell",
+ "ra_ap_base_db",
+ "ra_ap_hir",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_text_edit",
+ "rayon",
+ "rustc-hash",
+]
+
+[[package]]
+name = "ra_ap_ide_ssr"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22f52084cd0aa091435f1b53e9411261577123634c06ef1bcf9df4886048cbb7"
+dependencies = [
+ "cov-mark",
+ "itertools",
+ "ra_ap_hir",
+ "ra_ap_ide_db",
+ "ra_ap_syntax",
+ "ra_ap_text_edit",
+ "rustc-hash",
+]
+
+[[package]]
+name = "ra_ap_la-arena"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f63469d496d4931cbdee5be3f5cae4462a1922355d0a738f8f92fc5ec2b045c0"
+
+[[package]]
+name = "ra_ap_mbe"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb21c13cdd137ec5601945ae4a06449426f93b1a28b2eabc58701acd2c280836"
+dependencies = [
+ "cov-mark",
+ "log",
+ "ra_ap_parser",
+ "ra_ap_stdx",
+ "ra_ap_syntax",
+ "ra_ap_tt",
+ "rustc-hash",
+ "smallvec",
+]
+
+[[package]]
+name = "ra_ap_parser"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35f14cbaa2d81b8f2ec5add08aff69bb9f54d8f9a77e1b08bb75b5b44527b170"
+dependencies = [
+ "drop_bomb",
+]
+
+[[package]]
+name = "ra_ap_paths"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41874cc1efdcb75b0e754b5553a7cb881f8d316fb411aeed3613992590d039b2"
+
+[[package]]
+name = "ra_ap_profile"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be3aece5fa2b4beaff4cd514ac828410aeb4be2f0c5883241e83e838744bfcc3"
+dependencies = [
+ "cfg-if 1.0.0",
+ "countme",
+ "libc",
+ "once_cell",
+ "perf-event",
+ "ra_ap_la-arena",
+]
+
+[[package]]
+name = "ra_ap_stdx"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88b46f1fc905b434f6ee3642e69f196a52982732f710d2653b99e1ba4f143ad6"
+dependencies = [
+ "always-assert",
+]
+
+[[package]]
+name = "ra_ap_syntax"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37521541bf3eb9912151d54de3bc7843f15bee6e92b986a293c002dcc987184e"
+dependencies = [
+ "arrayvec",
+ "cov-mark",
+ "indexmap",
+ "itertools",
+ "once_cell",
+ "ra_ap_parser",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "ra_ap_text_edit",
+ "rowan",
+ "rustc-ap-rustc_lexer",
+ "rustc-hash",
+ "serde",
+ "smol_str",
+]
+
+[[package]]
+name = "ra_ap_test_utils"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fe053dca23f282e91267141eb8f371eb73811f7f9d16657572e4a42ee8d6651"
+dependencies = [
+ "dissimilar",
+ "ra_ap_profile",
+ "ra_ap_stdx",
+ "rustc-hash",
+ "text-size",
+]
+
+[[package]]
+name = "ra_ap_text_edit"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bb960cb44dab5b4fb42cbe05461934cad6e4fbb4b8ca9b485f93ab9e89b1628"
+dependencies = [
+ "text-size",
+]
+
+[[package]]
+name = "ra_ap_tt"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5ebdccd699ca59b3687b8d42245ed23cf9f95e64e89932a46119809c16688f"
+dependencies = [
+ "ra_ap_stdx",
+ "smol_str",
+]
+
+[[package]]
+name = "ra_ap_vfs"
+version = "0.0.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f56be4bda1b49e39427c4ebac35e53308b2f9cdccd1653b5e038c54b7e705aac"
+dependencies = [
+ "fst",
+ "ra_ap_paths",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -900,9 +990,9 @@ checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 
 [[package]]
 name = "rowan"
-version = "0.13.0-pre.2"
+version = "0.13.0-pre.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f300be7fa17c3fa563d2bc6ab5b1a8d5163162f9111599eda4f86a563714724"
+checksum = "77d315d6f2e33f294412faa47f41b56bdb3fce72c999d384b5e78c8d21551b13"
 dependencies = [
  "countme",
  "hashbrown",
@@ -1071,14 +1161,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "stdx"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "always-assert",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1102,27 +1184,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "syntax"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "arrayvec",
- "cov-mark",
- "indexmap",
- "itertools",
- "once_cell",
- "parser",
- "profile",
- "rowan",
- "rustc-ap-rustc_lexer",
- "rustc-hash",
- "serde",
- "smol_str",
- "stdx",
- "text_edit",
-]
-
-[[package]]
 name = "termcolor"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1132,30 +1193,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_utils"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "dissimilar",
- "profile",
- "rustc-hash",
- "stdx",
- "text-size",
-]
-
-[[package]]
 name = "text-size"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "288cb548dbe72b652243ea797201f3d481a0609a967980fcc5b2315ea811560a"
-
-[[package]]
-name = "text_edit"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "text-size",
-]
 
 [[package]]
 name = "thread_local"
@@ -1271,15 +1312,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tt"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "smol_str",
- "stdx",
-]
-
-[[package]]
 name = "unicase"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1335,16 +1367,6 @@ name = "version_check"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
-
-[[package]]
-name = "vfs"
-version = "0.0.0"
-source = "git+https://github.com/rust-analyzer/rust-analyzer?rev=27befe6c7#27befe6c7fe064b364182e2ad54825b5e5f9dee3"
-dependencies = [
- "fst",
- "paths",
- "rustc-hash",
-]
 
 [[package]]
 name = "wasm-bindgen"
@@ -1417,9 +1439,9 @@ name = "wasm_demo"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "ide",
- "ide_db",
  "log",
+ "ra_ap_ide",
+ "ra_ap_ide_db",
  "serde",
  "serde-wasm-bindgen",
  "serde_repr",

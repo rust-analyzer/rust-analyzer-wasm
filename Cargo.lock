@@ -339,6 +339,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
  "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1418,9 +1421,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-rayon"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3069d2a42e7a7e3bfde668f84adb5fbc35701ca2b39b27a064cbd5ede4e78194"
+checksum = "d4a65ba7898fbfbe9dd50d62b6027565f2b63e5bcbee7d318c3ce4a234a628e2"
 dependencies = [
  "js-sys",
  "rayon",
@@ -1439,6 +1442,7 @@ name = "wasm_demo"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "instant",
  "log",
  "ra_ap_ide",
  "ra_ap_ide_db",
@@ -1448,6 +1452,16 @@ dependencies = [
  "stacker",
  "wasm-bindgen",
  "wasm-bindgen-rayon",
+]
+
+[[package]]
+name = "web-sys"
+version = "0.3.49"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59fe19d70f5dacc03f6e46777213facae5ac3801575d56ca6cbd4c93dcd12310"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]

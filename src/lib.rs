@@ -385,11 +385,3 @@ fn file_position(
     let offset = line_index.offset(line_col);
     ide::FilePosition { file_id, offset }
 }
-
-// FIXME:
-// This is needed due to the fact that Instant::now is not supported in wasm
-// We provide a fake on such that web-pack will be happy.
-#[no_mangle]
-pub fn now() -> f64 {
-    return 0.0;
-}

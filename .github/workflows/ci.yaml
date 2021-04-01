@@ -1,0 +1,49 @@
+name: CI
+on:
+  pull_request:
+  push:
+   branches:
+   - master
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2021-02-11
+        target: wasm32-unknown-unknown
+        profile: minimal
+        override: true
+        components: rustfmt, rust-src
+
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '15'
+
+    - name: Build wasm
+      run: wasm-pack build --target web
+
+    - name: Install www
+      uses: borales/actions-yarn@v2.0.0
+      with:
+        cmd: --cwd www --ignore-engines install # will run `yarn install` command
+    
+    - name: Build www
+      uses: borales/actions-yarn@v2.0.0
+      with:
+        cmd: --cwd www --ignore-engines build # will run `yarn build` command

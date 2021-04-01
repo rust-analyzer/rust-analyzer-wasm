@@ -313,14 +313,14 @@ const start = async () => {
     await update();
     model.onDidChangeContent(update);
 
+    document.body.removeChild(loadingText);
+
     const myEditor = monaco.editor.create(document.body, {
         theme: 'vs-dark',
         model: model
     });
 
     window.onresize = () => myEditor.layout();
-
-    document.body.removeChild(loadingText);
 };
 
 start().then(() => {

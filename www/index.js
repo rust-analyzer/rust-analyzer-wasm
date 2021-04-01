@@ -299,6 +299,9 @@ const createRA = async () => {
 }
 
 const start = async () => {
+    var loadingText = document.createTextNode("Loading wasm...");
+    document.body.appendChild(loadingText);    
+    
     let model = monaco.editor.createModel(exampleCode, modeId);
     state = await createRA();
 
@@ -316,6 +319,8 @@ const start = async () => {
     });
 
     window.onresize = () => myEditor.layout();
+
+    document.body.removeChild(loadingText);
 };
 
 start().then(() => {

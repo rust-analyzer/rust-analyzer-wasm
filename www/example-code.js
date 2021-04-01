@@ -2,6 +2,17 @@ export default `use crate::List::*;
 
 mod unresolved_module;
 
+/// println macro
+macro_rules! println {
+    ($s:literal, $($e:expr),*) => {};
+}
+
+/// format macro
+macro_rules! format {
+    ($s:literal) => {};
+    ($s:literal, $($e:expr),*) => {};
+}
+
 enum List {
     // Cons: Tuple struct that wraps an element and a pointer to the next node
     Cons(u32, Box<List>),

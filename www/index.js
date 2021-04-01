@@ -1,48 +1,53 @@
-// @ts-check
 import 'monaco-editor/esm/vs/editor/browser/controller/coreCommands';
 import 'monaco-editor/esm/vs/editor/browser/widget/codeEditorWidget';
 import 'monaco-editor/esm/vs/editor/browser/widget/diffEditorWidget';
 import 'monaco-editor/esm/vs/editor/browser/widget/diffNavigator';
+import 'monaco-editor/esm/vs/editor/contrib/anchorSelect/anchorSelect';
 import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/bracketMatching';
 import 'monaco-editor/esm/vs/editor/contrib/caretOperations/caretOperations';
 import 'monaco-editor/esm/vs/editor/contrib/caretOperations/transpose';
 import 'monaco-editor/esm/vs/editor/contrib/clipboard/clipboard';
 import 'monaco-editor/esm/vs/editor/contrib/codeAction/codeActionContributions';
 import 'monaco-editor/esm/vs/editor/contrib/codelens/codelensController';
-import 'monaco-editor/esm/vs/editor/contrib/colorPicker/colorDetector';
+import 'monaco-editor/esm/vs/editor/contrib/colorPicker/colorContributions';
 import 'monaco-editor/esm/vs/editor/contrib/comment/comment';
 import 'monaco-editor/esm/vs/editor/contrib/contextmenu/contextmenu';
 import 'monaco-editor/esm/vs/editor/contrib/cursorUndo/cursorUndo';
 import 'monaco-editor/esm/vs/editor/contrib/dnd/dnd';
+import 'monaco-editor/esm/vs/editor/contrib/documentSymbols/documentSymbols';
 import 'monaco-editor/esm/vs/editor/contrib/find/findController';
 import 'monaco-editor/esm/vs/editor/contrib/folding/folding';
 import 'monaco-editor/esm/vs/editor/contrib/fontZoom/fontZoom';
 import 'monaco-editor/esm/vs/editor/contrib/format/formatActions';
-import 'monaco-editor/esm/vs/editor/contrib/goToDefinition/goToDefinitionCommands';
-import 'monaco-editor/esm/vs/editor/contrib/goToDefinition/goToDefinitionMouse';
 import 'monaco-editor/esm/vs/editor/contrib/gotoError/gotoError';
+import 'monaco-editor/esm/vs/editor/contrib/gotoSymbol/goToCommands';
+import 'monaco-editor/esm/vs/editor/contrib/gotoSymbol/link/goToDefinitionAtPosition';
 import 'monaco-editor/esm/vs/editor/contrib/hover/hover';
 import 'monaco-editor/esm/vs/editor/contrib/inPlaceReplace/inPlaceReplace';
+import 'monaco-editor/esm/vs/editor/contrib/indentation/indentation';
+import 'monaco-editor/esm/vs/editor/contrib/inlineHints/inlineHintsController';
 import 'monaco-editor/esm/vs/editor/contrib/linesOperations/linesOperations';
+import 'monaco-editor/esm/vs/editor/contrib/linkedEditing/linkedEditing';
 import 'monaco-editor/esm/vs/editor/contrib/links/links';
 import 'monaco-editor/esm/vs/editor/contrib/multicursor/multicursor';
 import 'monaco-editor/esm/vs/editor/contrib/parameterHints/parameterHints';
-import 'monaco-editor/esm/vs/editor/contrib/referenceSearch/referenceSearch';
 import 'monaco-editor/esm/vs/editor/contrib/rename/rename';
 import 'monaco-editor/esm/vs/editor/contrib/smartSelect/smartSelect';
 import 'monaco-editor/esm/vs/editor/contrib/snippet/snippetController2';
 import 'monaco-editor/esm/vs/editor/contrib/suggest/suggestController';
-import 'monaco-editor/esm/vs/editor/contrib/tokenization/tokenization';
 import 'monaco-editor/esm/vs/editor/contrib/toggleTabFocusMode/toggleTabFocusMode';
+import 'monaco-editor/esm/vs/editor/contrib/unusualLineTerminators/unusualLineTerminators';
+import 'monaco-editor/esm/vs/editor/contrib/viewportSemanticTokens/viewportSemanticTokens';
 import 'monaco-editor/esm/vs/editor/contrib/wordHighlighter/wordHighlighter';
 import 'monaco-editor/esm/vs/editor/contrib/wordOperations/wordOperations';
 import 'monaco-editor/esm/vs/editor/contrib/wordPartOperations/wordPartOperations';
 import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp';
 import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard';
 import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickOpen/gotoLine';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickOpen/quickCommand';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickOpen/quickOutline';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess';
 import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch';
 import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast';
 
@@ -59,7 +64,8 @@ if (typeof TextEncoder === "undefined") {
 
 import './index.css';
 
-const wasmDemo = import('wasm_demo');
+var state;
+var allTokens;
 
 self.MonacoEnvironment = {
     getWorkerUrl: () => './editor.worker.bundle.js',
@@ -74,22 +80,7 @@ monaco.languages.register({ // language for hover info
 });
 
 monaco.languages.onLanguage(modeId, async () => {
-    const { WorldState } = await wasmDemo;
-
-    const state = new WorldState();
-
-    const [model] = monaco.editor.getModels();
-    let allTokens = [];
-
-    function update() {
-        console.info('update');
-        const res = state.update(model.getValue());
-        monaco.editor.setModelMarkers(model, modeId, res.diagnostics);
-        allTokens = res.highlights;
-    }
-    update();
-
-    model.onDidChangeContent(update);
+    console.log(modeId);
 
     monaco.languages.setLanguageConfiguration(modeId, rustConf.conf);
     monaco.languages.setLanguageConfiguration('rust', rustConf.conf);
@@ -99,8 +90,8 @@ monaco.languages.onLanguage(modeId, async () => {
         provideHover: (_, pos) => state.hover(pos.lineNumber, pos.column),
     });
     monaco.languages.registerCodeLensProvider(modeId, {
-        provideCodeLenses(m) {
-            const code_lenses = state.code_lenses();
+        async provideCodeLenses(m) {
+            const code_lenses = await state.code_lenses();
             const lenses = code_lenses.map(({ range, command }) => {
                 const position = {
                     column: range.startColumn,
@@ -126,19 +117,21 @@ monaco.languages.onLanguage(modeId, async () => {
         },
     });
     monaco.languages.registerReferenceProvider(modeId, {
-        provideReferences(m, pos, { includeDeclaration }) {
-            const references = state.references(pos.lineNumber, pos.column, includeDeclaration);
+        async provideReferences(m, pos, { includeDeclaration }) {
+            const references = await state.references(pos.lineNumber, pos.column, includeDeclaration);
             if (references) {
                 return references.map(({ range }) => ({ uri: m.uri, range }));
             }
         },
     });
     monaco.languages.registerDocumentHighlightProvider(modeId, {
-        provideDocumentHighlights: (_, pos) => state.references(pos.lineNumber, pos.column, true),
+        async provideDocumentHighlights(_, pos) {
+            return await state.references(pos.lineNumber, pos.column, true);
+        }
     });
     monaco.languages.registerRenameProvider(modeId, {
-        provideRenameEdits: (m, pos, newName) => {
-            const edits = state.rename(pos.lineNumber, pos.column, newName);
+        async provideRenameEdits(m, pos, newName) {
+            const edits = await state.rename(pos.lineNumber, pos.column, newName);
             if (edits) {
                 return {
                     edits: [{
@@ -148,12 +141,14 @@ monaco.languages.onLanguage(modeId, async () => {
                 };
             }
         },
-        resolveRenameLocation: (_, pos) => state.prepare_rename(pos.lineNumber, pos.column),
+        async resolveRenameLocation(_, pos) {
+            return state.prepare_rename(pos.lineNumber, pos.column);
+        }
     });
     monaco.languages.registerCompletionItemProvider(modeId, {
         triggerCharacters: [".", ":", "="],
-        provideCompletionItems(m, pos) {
-            const suggestions = state.completions(pos.lineNumber, pos.column);
+        async provideCompletionItems(_m, pos) {
+            const suggestions = await state.completions(pos.lineNumber, pos.column);
             if (suggestions) {
                 return { suggestions };
             }
@@ -161,8 +156,8 @@ monaco.languages.onLanguage(modeId, async () => {
     });
     monaco.languages.registerSignatureHelpProvider(modeId, {
         signatureHelpTriggerCharacters: ['(', ','],
-        provideSignatureHelp(m, pos) {
-            const value = state.signature_help(pos.lineNumber, pos.column);
+        async provideSignatureHelp(_m, pos) {
+            const value = await state.signature_help(pos.lineNumber, pos.column);
             if (!value) return null;
             return {
                 value,
@@ -171,38 +166,44 @@ monaco.languages.onLanguage(modeId, async () => {
         },
     });
     monaco.languages.registerDefinitionProvider(modeId, {
-        provideDefinition(m, pos) {
-            const list = state.definition(pos.lineNumber, pos.column);
+        async provideDefinition(m, pos) {
+            const list = await state.definition(pos.lineNumber, pos.column);
             if (list) {
                 return list.map(def => ({ ...def, uri: m.uri }));
             }
         },
     });
     monaco.languages.registerTypeDefinitionProvider(modeId, {
-        provideTypeDefinition(m, pos) {
-            const list = state.type_definition(pos.lineNumber, pos.column);
+        async provideTypeDefinition(m, pos) {
+            const list = await state.type_definition(pos.lineNumber, pos.column);
             if (list) {
                 return list.map(def => ({ ...def, uri: m.uri }));
             }
         },
     });
     monaco.languages.registerImplementationProvider(modeId, {
-        provideImplementation(m, pos) {
-            const list = state.goto_implementation(pos.lineNumber, pos.column);
+        async provideImplementation(m, pos) {
+            const list = await state.goto_implementation(pos.lineNumber, pos.column);
             if (list) {
                 return list.map(def => ({ ...def, uri: m.uri }));
             }
         },
     });
     monaco.languages.registerDocumentSymbolProvider(modeId, {
-        provideDocumentSymbols: () => state.document_symbols(),
+        async provideDocumentSymbols() {
+            return await state.document_symbols();
+        }
     });
     monaco.languages.registerOnTypeFormattingEditProvider(modeId, {
         autoFormatTriggerCharacters: [".", "="],
-        provideOnTypeFormattingEdits: (_, pos, ch) => state.type_formatting(pos.lineNumber, pos.column, ch),
+        async provideOnTypeFormattingEdits(_, pos, ch) {
+            return await state.type_formatting(pos.lineNumber, pos.column, ch);
+        }
     });
     monaco.languages.registerFoldingRangeProvider(modeId, {
-        provideFoldingRanges: () => state.folding_ranges(),
+        async provideFoldingRanges() {
+            return await state.folding_ranges();
+        }
     });
 
     class TokenState {
@@ -238,13 +239,6 @@ monaco.languages.onLanguage(modeId, async () => {
                 startIndex: token.range.startColumn - 1,
                 scopes: fixTag(token.tag),
             }));
-            // add tokens inbetween highlighted ones to remove color artifacts
-            tokens.push(...filteredTokens
-                .filter((tok, i) => i === tokens.length - 1 || tokens[i + 1].startIndex > (tok.range.endColumn - 1))
-                .map((token) => ({
-                    startIndex: token.range.endColumn - 1,
-                    scopes: 'operator',
-                })));
             tokens.sort((a, b) => a.startIndex - b.startIndex);
 
             return {
@@ -255,10 +249,81 @@ monaco.languages.onLanguage(modeId, async () => {
     });
 });
 
-const myEditor = monaco.editor.create(document.body, {
-    theme: 'vs-dark',
-    value: exampleCode,
-    language: modeId,
-});
 
-window.onresize = () => myEditor.layout();
+// Create an RA Web worker
+const createRA = async () => {
+    const worker = new Worker(new URL('./ra-worker.js', import.meta.url));
+    const pendingResolve = {};
+
+    let id = 1;
+    let ready;
+
+    const callWorker = async (which, ...args) => {
+        return new Promise((resolve, _) => {
+            pendingResolve[id] = resolve;
+            worker.postMessage({
+                "which": which,
+                "args": args,
+                "id": id
+            });
+            id += 1;
+        });
+    }
+
+    const proxyHandler = {
+        get: (target, prop, _receiver) => {
+            if (prop == "then") {
+                return Reflect.get(target, prop, _receiver);
+            }
+            return async (...args) => {
+                return callWorker(prop, ...args);
+            }
+        }
+    }
+
+    worker.onmessage = (e) => {
+        if (e.data.id == "ra-worker-ready") {
+            ready(new Proxy({}, proxyHandler));
+            return;
+        }
+        const pending = pendingResolve[e.data.id];
+        if (pending) {
+            pending(e.data.result);
+            delete pendingResolve[e.data.id];
+        }
+    }
+
+    return new Promise((resolve, _) => {
+        ready = resolve;
+    });
+}
+
+const start = async () => {
+    var loadingText = document.createTextNode("Loading wasm...");
+    document.body.appendChild(loadingText);    
+    
+    let model = monaco.editor.createModel(exampleCode, modeId);
+    state = await createRA();
+
+    async function update() {
+        const res = await state.update(model.getValue());
+        monaco.editor.setModelMarkers(model, modeId, res.diagnostics);
+        allTokens = res.highlights;
+    }
+    await update();
+    model.onDidChangeContent(update);
+
+    const myEditor = monaco.editor.create(document.body, {
+        theme: 'vs-dark',
+        model: model
+    });
+
+    window.onresize = () => myEditor.layout();
+
+    document.body.removeChild(loadingText);
+};
+
+start().then(() => {
+    console.log("start");
+})
+

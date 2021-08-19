@@ -1444,6 +1444,7 @@ dependencies = [
  "console_error_panic_hook",
  "instant",
  "log",
+ "ra_ap_cfg",
  "ra_ap_ide",
  "ra_ap_ide_db",
  "serde",

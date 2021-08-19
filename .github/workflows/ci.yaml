@@ -36,7 +36,11 @@ jobs:
         node-version: '15'
 
     - name: Build wasm
-      run: wasm-pack build --target web
+      run: |
+        cd rust-pack
+        cargo run
+        cd ../ra-wasm
+        wasm-pack build --target web
 
     - name: Install www
       uses: borales/actions-yarn@v2.0.0

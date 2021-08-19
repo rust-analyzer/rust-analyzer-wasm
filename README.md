@@ -3,8 +3,11 @@
 To run:
 
 ```shell
+$ cd rust-pack
+$ cargo run
+$ cd ../ra-wasm
 $ wasm-pack build --target web
-$ cd www
+$ cd ../www
 $ yarn
 $ yarn start
 ```

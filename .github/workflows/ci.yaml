@@ -4,6 +4,7 @@ on:
   push:
    branches:
    - master
+   - trying
 
 env:
   CARGO_INCREMENTAL: 0

@@ -39,6 +39,20 @@ pub struct Highlight {
     pub range: Range,
 }
 
+#[derive(Serialize_repr)]
+#[repr(u8)]
+pub enum InlayHintType {
+    Type = 1,
+    Parameter = 2,
+}
+
+#[derive(Serialize)]
+pub struct InlayHint {
+    pub label: Option<String>,
+    pub hint_type: InlayHintType,
+    pub range: Range,
+}
+
 #[derive(Serialize)]
 pub struct TextEdit {
     pub range: Range,

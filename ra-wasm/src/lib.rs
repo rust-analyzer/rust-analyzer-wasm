@@ -1,11 +1,14 @@
 #![cfg(target_arch = "wasm32")]
 #![allow(non_snake_case)]
 
-use ide::{Analysis, CompletionConfig, DiagnosticsConfig, FileId, FilePosition, Indel, TextSize};
-use ide_db::helpers::{
-    insert_use::{InsertUseConfig, MergeBehavior, PrefixKind},
-    SnippetCap,
-};
+use std::sync::Arc;
+
+use ide::{Analysis, AnalysisHost, Change, CompletionConfig, CrateGraph, CrateId, DiagnosticsConfig, Edition, FileId, FilePosition, Indel, InlayHintsConfig, InlayKind, SourceRoot, TextSize};
+use ide_db::{base_db::{CrateName, Env, FileSet, VfsPath}, helpers::{
+        insert_use::{InsertUseConfig, MergeBehavior, PrefixKind},
+        SnippetCap,
+    }};
+use cfg::CfgOptions;
 use wasm_bindgen::prelude::*;
 
 mod to_proto;
@@ -17,37 +20,130 @@ pub use wasm_bindgen_rayon::init_thread_pool;
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    #[cfg(feature = "dev")]
-    {
-        console_error_panic_hook::set_once();
-    }
+    console_error_panic_hook::set_once();
     log::info!("worker initialized")
 }
 
 #[wasm_bindgen]
 pub struct WorldState {
-    analysis: Analysis,
+    host: AnalysisHost,
     file_id: FileId,
+}
+
+pub fn create_source_root(name: &str, f: FileId) -> SourceRoot {
+    let mut file_set = FileSet::default();
+    file_set.insert(f, VfsPath::new_virtual_path(format!("/{}/src/lib.rs", name)));
+    SourceRoot::new_library(file_set)
+}
+
+pub fn create_crate(crate_graph: &mut CrateGraph, f: FileId) -> CrateId {
+    let mut cfg = CfgOptions::default();
+    cfg.insert_atom("unix".into());
+    cfg.insert_key_value("target_arch".into(), "x86_64".into());
+    cfg.insert_key_value("target_pointer_width".into(), "64".into());
+    crate_graph.add_crate_root(
+        f,
+        Edition::Edition2018,
+        None,
+        cfg,
+        Env::default(),
+        Default::default(),
+    )
+}
+
+pub fn from_single_file(text: String, fake_std: String, fake_core: String, fake_alloc: String) -> (AnalysisHost, FileId) {
+    let mut host = AnalysisHost::default();
+    let file_id = FileId(0);
+    let std_id = FileId(1);
+    let core_id = FileId(2);
+    let alloc_id = FileId(3);
+
+    let mut file_set = FileSet::default();
+    file_set.insert(file_id, VfsPath::new_virtual_path("/my_crate/main.rs".to_string()));
+    let source_root = SourceRoot::new_local(file_set);
+
+    let mut change = Change::new();
+    change.set_roots(vec![
+        source_root,
+        create_source_root("std", std_id),
+        create_source_root("core", core_id),
+        create_source_root("alloc", alloc_id),
+    ]);
+    let mut crate_graph = CrateGraph::default();
+    let my_crate    = create_crate(&mut crate_graph, file_id);
+    let std_crate   = create_crate(&mut crate_graph, std_id);
+    let core_crate  = create_crate(&mut crate_graph, core_id);
+    let alloc_crate = create_crate(&mut crate_graph, alloc_id);
+    crate_graph.add_dep(
+        std_crate,
+        CrateName::new("core").unwrap(),
+        core_crate,
+    ).unwrap();
+    crate_graph.add_dep(
+        std_crate,
+        CrateName::new("alloc").unwrap(),
+        alloc_crate,
+    ).unwrap();
+    crate_graph.add_dep(
+        alloc_crate,
+        CrateName::new("core").unwrap(),
+        core_crate,
+    ).unwrap();
+    crate_graph.add_dep(
+        my_crate,
+        CrateName::new("core").unwrap(),
+        core_crate,
+    ).unwrap();
+    crate_graph.add_dep(
+        my_crate,
+        CrateName::new("alloc").unwrap(),
+        alloc_crate,
+    ).unwrap();
+    crate_graph.add_dep(
+        my_crate,
+        CrateName::new("std").unwrap(),
+        std_crate,
+    ).unwrap();
+    change.change_file(file_id, Some(Arc::new(text)));
+    change.change_file(std_id, Some(Arc::new(fake_std)));
+    change.change_file(core_id, Some(Arc::new(fake_core)));
+    change.change_file(alloc_id, Some(Arc::new(fake_alloc)));
+    change.set_crate_graph(crate_graph);
+    host.apply_change(change);
+    (host, file_id)
+}
+
+impl WorldState {
+    fn analysis(&self) -> Analysis {
+        self.host.analysis()
+    }
 }
 
 #[wasm_bindgen]
 impl WorldState {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        let (analysis, file_id) = Analysis::from_single_file("".to_owned());
-        Self { analysis, file_id }
+        let (host, file_id) = from_single_file("".to_owned(), "".to_owned(), "".to_owned(), "".to_owned());
+        Self { host, file_id }
+    }
+
+    pub fn init(&mut self, code: String, fake_std: String, fake_core: String, fake_alloc: String) {
+        let (host, file_id) = from_single_file(code, fake_std, fake_core, fake_alloc);
+        self.host = host;
+        self.file_id = file_id;
     }
 
     pub fn update(&mut self, code: String) -> JsValue {
         log::warn!("update");
-        let (analysis, file_id) = Analysis::from_single_file(code);
-        self.analysis = analysis;
-        self.file_id = file_id;
+        let file_id = FileId(0);
+        let mut change = Change::new();
+        change.change_file(file_id, Some(Arc::new(code)));
+        self.host.apply_change(change);
 
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let highlights: Vec<_> = self
-            .analysis
+            .analysis()
             .highlight(file_id)
             .unwrap()
             .into_iter()
@@ -60,7 +156,7 @@ impl WorldState {
         let config = DiagnosticsConfig::default();
 
         let diagnostics: Vec<_> = self
-            .analysis
+            .analysis()
             .diagnostics(&config, file_id)
             .unwrap()
             .into_iter()
@@ -81,6 +177,33 @@ impl WorldState {
         serde_wasm_bindgen::to_value(&UpdateResult { diagnostics, highlights }).unwrap()
     }
 
+    pub fn inlay_hints(&self) -> JsValue {
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
+        let results: Vec<_> = self
+            .analysis()
+            .inlay_hints(
+                self.file_id,
+                &InlayHintsConfig {
+                    type_hints: true,
+                    parameter_hints: true,
+                    chaining_hints: true,
+                    max_length: Some(25),
+                },
+            )
+            .unwrap()
+            .into_iter()
+            .map(|ih| InlayHint {
+                label: Some(ih.label.to_string()),
+                hint_type: match ih.kind {
+                    InlayKind::TypeHint | InlayKind::ChainingHint => InlayHintType::Type,
+                    InlayKind::ParameterHint => InlayHintType::Parameter,
+                },
+                range: to_proto::text_range(ih.range, &line_index),
+            })
+            .collect();
+        serde_wasm_bindgen::to_value(&results).unwrap()
+    }
+
     pub fn completions(&self, line_number: u32, column: u32) -> JsValue {
         const COMPLETION_CONFIG: CompletionConfig = CompletionConfig {
             enable_postfix_completions: true,
@@ -96,10 +219,10 @@ impl WorldState {
         };
 
         log::warn!("completions");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let res = match self.analysis.completions(&COMPLETION_CONFIG, pos).unwrap() {
+        let res = match self.analysis().completions(&COMPLETION_CONFIG, pos).unwrap() {
             Some(items) => items,
             None => return JsValue::NULL,
         };
@@ -111,10 +234,10 @@ impl WorldState {
 
     pub fn hover(&self, line_number: u32, column: u32) -> JsValue {
         log::warn!("hover");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let info = match self.analysis.hover(pos, true, true).unwrap() {
+        let info = match self.analysis().hover(pos, true, true).unwrap() {
             Some(info) => info,
             _ => return JsValue::NULL,
         };
@@ -130,10 +253,10 @@ impl WorldState {
 
     pub fn code_lenses(&self) -> JsValue {
         log::warn!("code_lenses");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let results: Vec<_> = self
-            .analysis
+            .analysis()
             .file_structure(self.file_id)
             .unwrap()
             .into_iter()
@@ -149,7 +272,7 @@ impl WorldState {
             .filter_map(|it| {
                 let position =
                     FilePosition { file_id: self.file_id, offset: it.node_range.start() };
-                let nav_info = self.analysis.goto_implementation(position).unwrap()?;
+                let nav_info = self.analysis().goto_implementation(position).unwrap()?;
 
                 let title = if nav_info.info.len() == 1 {
                     "1 implementation".into()
@@ -180,10 +303,10 @@ impl WorldState {
 
     pub fn references(&self, line_number: u32, column: u32, include_declaration: bool) -> JsValue {
         log::warn!("references");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let info = match self.analysis.find_all_refs(pos, None).unwrap() {
+        let info = match self.analysis().find_all_refs(pos, None).unwrap() {
             Some(info) => info,
             _ => return JsValue::NULL,
         };
@@ -207,10 +330,10 @@ impl WorldState {
 
     pub fn prepare_rename(&self, line_number: u32, column: u32) -> JsValue {
         log::warn!("prepare_rename");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let refs = match self.analysis.find_all_refs(pos, None).unwrap() {
+        let refs = match self.analysis().find_all_refs(pos, None).unwrap() {
             None => return JsValue::NULL,
             Some(refs) => refs,
         };
@@ -224,10 +347,10 @@ impl WorldState {
 
     pub fn rename(&self, line_number: u32, column: u32, new_name: &str) -> JsValue {
         log::warn!("rename");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let change = match self.analysis.rename(pos, new_name).unwrap() {
+        let change = match self.analysis().rename(pos, new_name).unwrap() {
             Ok(change) => change,
             Err(_) => return JsValue::NULL,
         };
@@ -244,10 +367,10 @@ impl WorldState {
 
     pub fn signature_help(&self, line_number: u32, column: u32) -> JsValue {
         log::warn!("signature_help");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let call_info = match self.analysis.call_info(pos) {
+        let call_info = match self.analysis().call_info(pos) {
             Ok(Some(call_info)) => call_info,
             _ => return JsValue::NULL,
         };
@@ -265,10 +388,10 @@ impl WorldState {
 
     pub fn definition(&self, line_number: u32, column: u32) -> JsValue {
         log::warn!("definition");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let nav_info = match self.analysis.goto_definition(pos) {
+        let nav_info = match self.analysis().goto_definition(pos) {
             Ok(Some(nav_info)) => nav_info,
             _ => return JsValue::NULL,
         };
@@ -279,10 +402,10 @@ impl WorldState {
 
     pub fn type_definition(&self, line_number: u32, column: u32) -> JsValue {
         log::warn!("type_definition");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let nav_info = match self.analysis.goto_type_definition(pos) {
+        let nav_info = match self.analysis().goto_type_definition(pos) {
             Ok(Some(nav_info)) => nav_info,
             _ => return JsValue::NULL,
         };
@@ -293,9 +416,9 @@ impl WorldState {
 
     pub fn document_symbols(&self) -> JsValue {
         log::warn!("document_symbols");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
-        let struct_nodes = match self.analysis.file_structure(self.file_id) {
+        let struct_nodes = match self.analysis().file_structure(self.file_id) {
             Ok(struct_nodes) => struct_nodes,
             _ => return JsValue::NULL,
         };
@@ -333,12 +456,12 @@ impl WorldState {
 
     pub fn type_formatting(&self, line_number: u32, column: u32, ch: char) -> JsValue {
         log::warn!("type_formatting");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let mut pos = file_position(line_number, column, &line_index, self.file_id);
         pos.offset -= TextSize::of('.');
 
-        let edit = self.analysis.on_char_typed(pos, ch);
+        let edit = self.analysis().on_char_typed(pos, ch);
 
         let (_file, edit) = match edit {
             Ok(Some(it)) => it.source_file_edits.into_iter().next().unwrap(),
@@ -351,8 +474,8 @@ impl WorldState {
 
     pub fn folding_ranges(&self) -> JsValue {
         log::warn!("folding_ranges");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
-        if let Ok(folds) = self.analysis.folding_ranges(self.file_id) {
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
+        if let Ok(folds) = self.analysis().folding_ranges(self.file_id) {
             let res: Vec<_> =
                 folds.into_iter().map(|fold| to_proto::folding_range(fold, &line_index)).collect();
             serde_wasm_bindgen::to_value(&res).unwrap()
@@ -363,10 +486,10 @@ impl WorldState {
 
     pub fn goto_implementation(&self, line_number: u32, column: u32) -> JsValue {
         log::warn!("goto_implementation");
-        let line_index = self.analysis.file_line_index(self.file_id).unwrap();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let nav_info = match self.analysis.goto_implementation(pos) {
+        let nav_info = match self.analysis().goto_implementation(pos) {
             Ok(Some(it)) => it,
             _ => return JsValue::NULL,
         };

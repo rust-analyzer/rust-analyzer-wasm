@@ -1,4 +1,4 @@
-import init, { initThreadPool, WorldState } from '../pkg/wasm_demo.js';
+import init, { initThreadPool, WorldState } from '../ra-wasm/pkg/wasm_demo.js';
 
 const start = async () => {
     await init();

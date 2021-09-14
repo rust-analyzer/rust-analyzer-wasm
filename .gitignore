@@ -1,6 +1,6 @@
 /.bundle
 /vendor
-/target
+target
 /_site
 .sass-cache
 .jekyll-cache

@@ -5,6 +5,7 @@ on:
    branches:
    - master
    - trying
+   - staging
 
 env:
   CARGO_INCREMENTAL: 0

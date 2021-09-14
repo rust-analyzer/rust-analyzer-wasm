@@ -7,11 +7,8 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib"]
 
-[features]
-dev = ["console_error_panic_hook"]
-
 [dependencies]
-console_error_panic_hook = { version = "0.1.6", optional = true }
+console_error_panic_hook = { version = "0.1.6" }
 instant = { version = "0.1", features = ["wasm-bindgen"] }
 log = { version = "0.4.14", features = ["release_max_level_warn"] }
 serde = { version = "1.0.125", features = ["derive"] }
@@ -22,4 +19,5 @@ wasm-bindgen = "0.2.72"
 wasm-bindgen-rayon = "1.0.2"
 
 ide = { version = "0.0.44", package = "ra_ap_ide" }
+cfg = { version = "0.0.44", package = "ra_ap_cfg" }
 ide_db = { version = "0.0.44", package = "ra_ap_ide_db" }

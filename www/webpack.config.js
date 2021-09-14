@@ -20,6 +20,10 @@ module.exports = {
                 use: ["style-loader", "css-loader"],
             },
             {
+                test: /\.rs$/,
+                use: ['raw-loader'],
+            },
+            {
                 test: /\.ttf$/,
                 use: ['file-loader']
             }
@@ -27,7 +31,7 @@ module.exports = {
     },
     plugins: [
         new HtmlWebPackPlugin({
-            title: "Rust Analyzer",
+            title: "Rust Analyzer Playground",
             chunks: ["app"],
         }),
     ],    

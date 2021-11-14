@@ -6,7 +6,7 @@ To run:
 $ cd rust-pack
 $ cargo run
 $ cd ../ra-wasm
-$ wasm-pack build --target web
+$ wasm-pack build --target web --profiling
 $ cd ../www
 $ yarn
 $ yarn start

@@ -152,10 +152,10 @@ const registerRA = async () => {
             const edits = await state.rename(pos.lineNumber, pos.column, newName);
             if (edits) {
                 return {
-                    edits: [{
+                    edits: edits.map(edit => ({
                         resource: m.uri,
-                        edits,
-                    }],
+                        edit,
+                    })),
                 };
             }
         },

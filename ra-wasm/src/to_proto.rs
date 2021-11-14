@@ -99,18 +99,15 @@ pub(crate) fn completion_item(
     let return_types::TextEdit { range, text } = edit.unwrap();
 
     return_types::CompletionItem {
-        kind: completion_item_kind(
-            item.kind().unwrap_or(ide::CompletionItemKind::SymbolKind(ide::SymbolKind::Struct)),
-        ),
+        kind: completion_item_kind(item.kind()),
         label: item.label().to_string(),
         range,
         detail: item.detail().map(|it| it.to_string()),
         insertText: text,
-        insertTextRules: match item.insert_text_format() {
-            ide::InsertTextFormat::PlainText => return_types::CompletionItemInsertTextRule::None,
-            ide::InsertTextFormat::Snippet => {
-                return_types::CompletionItemInsertTextRule::InsertAsSnippet
-            }
+        insertTextRules: if item.is_snippet() {
+            return_types::CompletionItemInsertTextRule::InsertAsSnippet
+        } else {
+            return_types::CompletionItemInsertTextRule::None
         },
         documentation: item.documentation().map(|doc| markdown_string(doc.as_str())),
         filterText: item.lookup().to_string(),
@@ -124,7 +121,7 @@ pub(crate) fn signature_information(
     use return_types::{ParameterInformation, SignatureInformation};
 
     let label = call_info.signature.clone();
-    let documentation = call_info.doc.as_ref().map(|it| markdown_string(&it));
+    let documentation = call_info.doc.as_ref().map(|it| markdown_string(it));
 
     let parameters: Vec<ParameterInformation> = call_info
         .parameter_labels()
@@ -139,15 +136,15 @@ pub(crate) fn location_links(
     nav_info: ide::RangeInfo<Vec<ide::NavigationTarget>>,
     line_index: &ide::LineIndex,
 ) -> Vec<return_types::LocationLink> {
-    let selection = text_range(nav_info.range, &line_index);
+    let selection = text_range(nav_info.range, line_index);
     nav_info
         .info
         .into_iter()
         .map(|nav| {
-            let range = text_range(nav.full_range, &line_index);
+            let range = text_range(nav.full_range, line_index);
 
             let target_selection_range =
-                nav.focus_range.map(|it| text_range(it, &line_index)).unwrap_or(range);
+                nav.focus_range.map(|it| text_range(it, line_index)).unwrap_or(range);
 
             return_types::LocationLink {
                 originSelectionRange: selection,
@@ -191,17 +188,15 @@ pub(crate) fn symbol_kind(kind: ide::StructureNodeKind) -> return_types::SymbolK
 }
 
 pub(crate) fn folding_range(fold: ide::Fold, ctx: &ide::LineIndex) -> return_types::FoldingRange {
-    let range = text_range(fold.range, &ctx);
+    let range = text_range(fold.range, ctx);
     return_types::FoldingRange {
         start: range.startLineNumber,
         end: range.endLineNumber,
         kind: match fold.kind {
             ide::FoldKind::Comment => Some(return_types::FoldingRangeKind::Comment),
             ide::FoldKind::Imports => Some(return_types::FoldingRangeKind::Imports),
-            ide::FoldKind::Mods => None,
-            ide::FoldKind::Block => None,
-            ide::FoldKind::ArgList => None,
             ide::FoldKind::Region => Some(return_types::FoldingRangeKind::Region),
+            _ => None,
         },
     }
 }

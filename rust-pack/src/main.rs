@@ -1,5 +1,4 @@
-#![feature(str_split_once)]
-
+#![allow(unused)]
 use core::panic;
 use std::fs;
 use std::fs::read_to_string;
@@ -20,7 +19,7 @@ struct ModState<'a> {
     in_attribute: bool,
 }
 
-fn remove_comment<'a>(line: &'a str) -> &'a str {
+fn remove_comment(line: &str) -> &str {
     if let Some((l, _)) = line.split_once("//") {
         l.trim()
     } else {
@@ -28,7 +27,7 @@ fn remove_comment<'a>(line: &'a str) -> &'a str {
     }
 }
 
-fn clean_token<'a>(line: &'a str) -> &'a str {
+fn clean_token(line: &str) -> &str {
     if let Some(l) = line.strip_prefix("r#") {
         l
     } else {
@@ -146,7 +145,7 @@ fn put_module_in_string(
             let folder_path = parent_path.join(format!("{}/mod.rs", m.name));
             let child_path = if let Some(ep) = m.explicit_path {
                 println!("explicit path found: {:?}", ep);
-                parent_path.join(ep)
+                path.parent().unwrap().join(ep)
             } else if same_level_path.exists() {
                 same_level_path
             } else if folder_path.exists() {

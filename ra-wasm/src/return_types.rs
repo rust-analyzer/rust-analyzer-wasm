@@ -62,7 +62,6 @@ pub struct TextEdit {
 #[derive(Serialize)]
 pub struct UpdateResult {
     pub diagnostics: Vec<Diagnostic>,
-    pub highlights: Vec<Highlight>,
 }
 
 #[derive(Serialize)]

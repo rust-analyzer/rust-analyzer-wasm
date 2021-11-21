@@ -1,5 +1,5 @@
 //! Conversion of rust-analyzer specific types to return_types equivalents.
-use crate::return_types;
+use crate::{return_types, semantic_tokens};
 
 pub(crate) fn text_range(
     range: ide::TextRange,
@@ -228,4 +228,124 @@ fn markdown_string(s: &str) -> return_types::MarkdownString {
     }
 
     return_types::MarkdownString { value: processed_lines.join("\n") }
+}
+
+pub(crate) type SemanticTokens = Vec<u32>;
+
+pub(crate) fn semantic_tokens(
+    text: &str,
+    line_index: &ide::LineIndex,
+    highlights: Vec<ide::HlRange>,
+) -> SemanticTokens {
+    let mut builder = semantic_tokens::SemanticTokensBuilder::new();
+
+    for highlight_range in highlights {
+        if highlight_range.highlight.is_empty() {
+            continue;
+        }
+        let (ty, mods) = semantic_token_type_and_modifiers(highlight_range.highlight);
+        let token_index = semantic_tokens::type_index(ty);
+        let modifier_bitset = mods.0;
+
+        for mut text_range in line_index.lines(highlight_range.range) {
+            if text[text_range].ends_with('\n') {
+                text_range = ide::TextRange::new(
+                    text_range.start(),
+                    text_range.end() - ide::TextSize::of('\n'),
+                );
+            }
+            let range = self::text_range(text_range, line_index);
+
+            builder.push(range, token_index, modifier_bitset);
+        }
+    }
+
+    builder.build()
+}
+
+fn semantic_token_type_and_modifiers(
+    highlight: ide::Highlight,
+) -> (semantic_tokens::SemanticTokenType, semantic_tokens::ModifierSet) {
+    use ide::{HlMod, HlTag, SymbolKind};
+    use semantic_tokens::*;
+    let mut mods = ModifierSet::default();
+    let type_ = match highlight.tag {
+        HlTag::Symbol(symbol) => match symbol {
+            SymbolKind::Module => SemanticTokenType::NAMESPACE,
+            SymbolKind::Impl => SemanticTokenType::TYPE,
+            SymbolKind::Field => SemanticTokenType::PROPERTY,
+            SymbolKind::TypeParam => SemanticTokenType::TYPE_PARAMETER,
+            SymbolKind::ConstParam => SemanticTokenType::PARAMETER,
+            SymbolKind::LifetimeParam => SemanticTokenType::TYPE_PARAMETER,
+            SymbolKind::Label => SemanticTokenType::LABEL,
+            SymbolKind::ValueParam => SemanticTokenType::PARAMETER,
+            SymbolKind::SelfParam => SemanticTokenType::KEYWORD,
+            SymbolKind::Local => SemanticTokenType::VARIABLE,
+            SymbolKind::Function => {
+                if highlight.mods.contains(HlMod::Associated) {
+                    SemanticTokenType::MEMBER
+                } else {
+                    SemanticTokenType::FUNCTION
+                }
+            }
+            SymbolKind::Const => {
+                mods |= SemanticTokenModifier::CONSTANT;
+                mods |= SemanticTokenModifier::STATIC;
+                SemanticTokenType::VARIABLE
+            }
+            SymbolKind::Static => {
+                mods |= SemanticTokenModifier::STATIC;
+                SemanticTokenType::VARIABLE
+            }
+            SymbolKind::Struct => SemanticTokenType::TYPE,
+            SymbolKind::Enum => SemanticTokenType::TYPE,
+            SymbolKind::Variant => SemanticTokenType::MEMBER,
+            SymbolKind::Union => SemanticTokenType::TYPE,
+            SymbolKind::TypeAlias => SemanticTokenType::TYPE,
+            SymbolKind::Trait => SemanticTokenType::INTERFACE,
+            SymbolKind::Macro => SemanticTokenType::MACRO,
+        },
+        HlTag::Attribute => SemanticTokenType::UNSUPPORTED,
+        HlTag::BoolLiteral => SemanticTokenType::NUMBER,
+        HlTag::BuiltinAttr => SemanticTokenType::UNSUPPORTED,
+        HlTag::BuiltinType => SemanticTokenType::TYPE,
+        HlTag::ByteLiteral | HlTag::NumericLiteral => SemanticTokenType::NUMBER,
+        HlTag::CharLiteral => SemanticTokenType::STRING,
+        HlTag::Comment => SemanticTokenType::COMMENT,
+        HlTag::EscapeSequence => SemanticTokenType::NUMBER,
+        HlTag::FormatSpecifier => SemanticTokenType::MACRO,
+        HlTag::Keyword => SemanticTokenType::KEYWORD,
+        HlTag::None => SemanticTokenType::UNSUPPORTED,
+        HlTag::Operator(_op) => SemanticTokenType::OPERATOR,
+        HlTag::StringLiteral => SemanticTokenType::STRING,
+        HlTag::UnresolvedReference => SemanticTokenType::UNSUPPORTED,
+        HlTag::Punctuation(_punct) => SemanticTokenType::OPERATOR,
+    };
+
+    for modifier in highlight.mods.iter() {
+        let modifier = match modifier {
+            HlMod::Associated => continue,
+            HlMod::Async => SemanticTokenModifier::ASYNC,
+            HlMod::Attribute => SemanticTokenModifier::ATTRIBUTE_MODIFIER,
+            HlMod::Callable => SemanticTokenModifier::CALLABLE,
+            HlMod::Consuming => SemanticTokenModifier::CONSUMING,
+            HlMod::ControlFlow => SemanticTokenModifier::CONTROL_FLOW,
+            HlMod::CrateRoot => SemanticTokenModifier::CRATE_ROOT,
+            HlMod::DefaultLibrary => SemanticTokenModifier::DEFAULT_LIBRARY,
+            HlMod::Definition => SemanticTokenModifier::DECLARATION,
+            HlMod::Documentation => SemanticTokenModifier::DOCUMENTATION,
+            HlMod::Injected => SemanticTokenModifier::INJECTED,
+            HlMod::IntraDocLink => SemanticTokenModifier::INTRA_DOC_LINK,
+            HlMod::Library => SemanticTokenModifier::LIBRARY,
+            HlMod::Mutable => SemanticTokenModifier::MUTABLE,
+            HlMod::Public => SemanticTokenModifier::PUBLIC,
+            HlMod::Reference => SemanticTokenModifier::REFERENCE,
+            HlMod::Static => SemanticTokenModifier::STATIC,
+            HlMod::Trait => SemanticTokenModifier::TRAIT_MODIFIER,
+            HlMod::Unsafe => SemanticTokenModifier::UNSAFE,
+        };
+        mods |= modifier;
+    }
+
+    (type_, mods)
 }

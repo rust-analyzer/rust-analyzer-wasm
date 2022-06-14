@@ -15,6 +15,7 @@ use ide_db::{
         insert_use::{ImportGranularity, InsertUseConfig, PrefixKind},
         SnippetCap,
     },
+    search::SearchScope,
 };
 use wasm_bindgen::prelude::*;
 
@@ -317,7 +318,8 @@ impl WorldState {
         let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
         let pos = file_position(line_number, column, &line_index, self.file_id);
-        let ref_results = match self.analysis().find_all_refs(pos, None) {
+        let search_scope = Some(SearchScope::single_file(self.file_id));
+        let ref_results = match self.analysis().find_all_refs(pos, search_scope) {
             Ok(Some(info)) => info,
             _ => return JsValue::NULL,
         };

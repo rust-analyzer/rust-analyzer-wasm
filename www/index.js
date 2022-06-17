@@ -55,13 +55,12 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import exampleCode from './example-code.rs';
 
 import './index.css';
-import { conf, grammar } from './rust-grammar';
+import { conf, grammar, semanticTokensLegend } from './rust-grammar';
 import fake_std from './fake_std.rs';
 import fake_core from './fake_core.rs';
 import fake_alloc from './fake_alloc.rs';
 
 var state;
-var allTokens;
 
 self.MonacoEnvironment = {
     getWorkerUrl: () => './editor.worker.bundle.js',
@@ -223,48 +222,16 @@ const registerRA = async () => {
             return await state.folding_ranges();
         }
     });
-
-    class TokenState {
-        constructor(line = 0) {
-            this.line = line;
-            this.equals = () => true;
-        }
-
-        clone() {
-            const res = new TokenState(this.line);
-            res.line += 1;
-            return res;
-        }
-    }
-
-    function fixTag(tag) {
-        switch (tag) {
-            case 'builtin': return 'variable.predefined';
-            case 'attribute': return 'key';
-            case 'macro': return 'number.hex';
-            case 'literal': return 'number';
-            default: return tag;
-        }
-    }
-
-    /*monaco.languages.setTokensProvider(modeId, {
-        getInitialState: () => new TokenState(),
-        tokenize(_, st) {
-            const filteredTokens = allTokens
-                .filter((token) => token.range.startLineNumber === st.line);
-
-            const tokens = filteredTokens.map((token) => ({
-                startIndex: token.range.startColumn - 1,
-                scopes: fixTag(token.tag),
-            }));
-            tokens.sort((a, b) => a.startIndex - b.startIndex);
-
-            return {
-                tokens,
-                endState: new TokenState(st.line + 1),
-            };
+    monaco.languages.registerDocumentSemanticTokensProvider(modeId, {
+        getLegend() {
+            return semanticTokensLegend;
         },
-    });*/
+        async provideDocumentSemanticTokens(model, lastResultId, token) {
+            let res = await state.semantic_tokens();
+            return { data: res };
+        },
+        releaseDocumentSemanticTokens(resultId) {},
+    });
 };
 
 
@@ -318,8 +285,8 @@ const createRA = async () => {
 
 const start = async () => {
     var loadingText = document.createTextNode("Loading wasm...");
-    document.body.appendChild(loadingText);    
-    
+    document.body.appendChild(loadingText);
+
     let model = monaco.editor.createModel(exampleCode, modeId);
     window.editor = monaco.editor;
     state = null; //await createRA();
@@ -327,20 +294,25 @@ const start = async () => {
     async function update() {
         const res = await state.update(model.getValue());
         monaco.editor.setModelMarkers(model, modeId, res.diagnostics);
-        allTokens = res.highlights;
     }
 
     monaco.editor.defineTheme('vscode-dark-plus', {
-        base: 'vs-dark', 
+        base: 'vs-dark',
         inherit: true,
         colors: {
             'editorInlayHint.foreground': '#A0A0A0F0',
             'editorInlayHint.background': '#11223300',
         },
         rules: [
-          { token: 'keyword.control', foreground: 'C586C0' },
-          { token: 'variable', foreground: '9CDCFE' },
-          { token: 'support.function', foreground: 'DCDCAA' },
+            { token: 'keyword.control', foreground: 'C586C0' },
+            { token: 'variable', foreground: '9CDCFE' },
+            { token: 'support.function', foreground: 'DCDCAA' },
+            { token: 'function', foreground: 'DCDCAA' },
+            { token: 'member', foreground: 'DCDCAA' },
+            { token: 'macro', foreground: '569CD6' },
+            { token: 'typeParameter', foreground: '569CD6' },
+            { token: 'variable.mutable', fontStyle: 'underline' },
+            { token: 'parameter.mutable', fontStyle: 'underline' },
         ],
     });
     document.body.removeChild(loadingText);
@@ -354,7 +326,8 @@ const start = async () => {
     initRA();
     const myEditor = monaco.editor.create(document.body, {
         theme: 'vscode-dark-plus',
-        model: model
+        model: model,
+        'semanticHighlighting.enabled': true,
     });
 
     window.onresize = () => myEditor.layout();

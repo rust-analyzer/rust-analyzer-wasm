@@ -17,14 +17,13 @@ use ide_db::{
     },
     search::SearchScope,
 };
+use return_types::*;
 use wasm_bindgen::prelude::*;
-
-mod to_proto;
+pub use wasm_bindgen_rayon::init_thread_pool;
 
 mod return_types;
-use return_types::*;
-
-pub use wasm_bindgen_rayon::init_thread_pool;
+mod semantic_tokens;
+mod to_proto;
 
 #[wasm_bindgen(start)]
 pub fn start() {
@@ -140,17 +139,6 @@ impl WorldState {
 
         let line_index = self.analysis().file_line_index(self.file_id).unwrap();
 
-        let highlights: Vec<_> = self
-            .analysis()
-            .highlight(file_id)
-            .unwrap()
-            .into_iter()
-            .map(|hl| Highlight {
-                tag: Some(hl.highlight.tag.to_string()),
-                range: to_proto::text_range(hl.range, &line_index),
-            })
-            .collect();
-
         let config = DiagnosticsConfig::default();
 
         let diagnostics: Vec<_> = self
@@ -172,7 +160,19 @@ impl WorldState {
             })
             .collect();
 
-        serde_wasm_bindgen::to_value(&UpdateResult { diagnostics, highlights }).unwrap()
+        serde_wasm_bindgen::to_value(&UpdateResult { diagnostics }).unwrap()
+    }
+
+    pub fn semantic_tokens(&self) -> Vec<u32> {
+        log::warn!("semantic_tokens");
+        // let mut builder = SemanticTokensBuilder::new();
+        let line_index = self.analysis().file_line_index(self.file_id).unwrap();
+        let file_text = self.analysis().file_text(self.file_id).unwrap();
+        to_proto::semantic_tokens(
+            &file_text,
+            &line_index,
+            self.analysis().highlight(self.file_id).unwrap(),
+        )
     }
 
     pub fn inlay_hints(&self) -> JsValue {
